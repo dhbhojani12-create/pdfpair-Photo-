@@ -4063,12 +4063,13 @@ async function aiFind(qf,qt,af,at,prog,opt){const a=AI.get(),key=a.key;if(!key)t
   if(!opt.mcq)it=it.filter(x=>!/mcq|multiple/i.test(x.group||""));
   it.sort((x,y)=>x.si-y.si);it=it.filter((x,i)=>!i||x.si!==it[i-1].si);
   it.forEach((x,i)=>{const lim=i+1<it.length?it[i+1].si-1:seq.length-1;x.ei=x.ei!=null&&x.ei>=x.si?Math.min(x.ei,lim):lim;x.key=aiNorm(x.label);x.box=aiBoxes(seq,x.si,x.ei)});
+  it.forEach(x=>LOG.add((x.kind==="q"?"Q ":"A ")+x.label+(x.group?" ["+x.group+"]":"")+": p."+seq[x.si].n+" “"+seq[x.si].tx.slice(0,50)+"” → p."+seq[x.ei].n));
   // pair each answer with the nearest earlier unpaired question of the same label (keeps chapters apart); then any unpaired one
   const qs=it.filter(x=>x.kind==="q"),pairs=new Map();let orph=0;
   for(const an of it.filter(x=>x.kind==="a")){let q=null;for(let k=qs.length-1;k>=0;k--){const c=qs[k];if(c.si<an.si&&!pairs.has(c)&&c.key===an.key){q=c;break}}
     if(!q)q=qs.find(c=>!pairs.has(c)&&c.key===an.key)||null;
     if(!q){const k=it.indexOf(an),pv=k>0?it[k-1]:null;if(pv&&pv.kind==="q"&&!pairs.has(pv))q=pv} // an unnumbered “Solution” right after its question
-    if(q)pairs.set(q,an);else{orph++;orphAdd(an.label||null,an.box,"AI found this answer but no question with the label “"+an.label+"”")}}
+    if(q)pairs.set(q,an);else{orph++;LOG.add("unmatched answer "+an.label+" on p."+seq[an.si].n);orphAdd(an.label||null,an.box,"AI found this answer but no question with the label “"+an.label+"”")}}
   const out=qs.map((q,i)=>{const an=pairs.get(q);const m=String(q.label).match(/\d+/);return{num:m?+m[0]:i+1,label:String(q.label||i+1).slice(0,24),q:q.box,a:an?an.box:[],tags:q.group?[String(q.group).split("·")[0].trim()].filter(Boolean):undefined}});
   LOG.add("AI result: "+out.length+" questions, "+pairs.size+" with answers, "+orph+" answers without a question");
   prog("Done",1);return{pairs:out,orphans:orph,missing:[],via:"AI ("+model+")"}}
