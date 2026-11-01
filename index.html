@@ -4044,6 +4044,10 @@ async function aiFind(qf,qt,af,at,prog,opt){const a=AI.get(),key=a.key;if(!key)t
     let j=null;for(let tries=0;;tries++){await pace(est,what);prog("AI is reading "+what+(ch.length>1?" (lines "+ch[0].split(" ")[0]+" to "+ch.at(-1).split(" ")[0]+")":""),.2+.75*done/total);hist.push({t:Date.now(),tok:est});
       try{j=await gemFetch("models/"+models[mi]+":generateContent",key,body);break}
       catch(e){const daily=/per ?day|PerDay|daily/i.test(e.raw||"");
+        const busy=e.code>=500||/high demand|overloaded|unavailable|try again later/i.test(e.raw||e.message||"");
+        if(busy&&tries<2){const w=tries?15:6;LOG.add(models[mi]+" busy ("+e.code+"), waiting "+w+"s");for(let t=w;t>0;t--){prog("Google’s AI is busy right now: trying again in "+t+"s",.2+.75*done/total);await new Promise(r=>setTimeout(r,1000))}continue}
+        if(busy&&mi+1<models.length){LOG.add(models[mi]+" still busy, switching to "+models[mi+1]);mi++;tries=-1;continue}
+        if(busy)throw Object.assign(new Error("Google’s AI is overloaded right now (“high demand”). This is on Google’s side and usually passes within minutes. Used PaperPair’s own methods instead."),{code:e.code});
         if(e.code===429&&daily&&mi+1<models.length){LOG.add("daily limit on "+models[mi]+", switching to "+models[mi+1]);mi++;continue}
         if(e.code===429&&daily)throw Object.assign(new Error("Google’s free daily limit for your key is used up (about 20 AI requests a day). Try again tomorrow, or use PaperPair’s own methods for now."),{code:429});
         if(e.code===429&&tries<4){const w=Math.min(65,Math.max(8,e.retry||20));LOG.add("429, waiting "+w+"s");for(let t=w;t>0;t--){prog("Google asked to slow down: waiting "+t+"s, then "+what,.2+.75*done/total);await new Promise(r=>setTimeout(r,1000))}continue}
