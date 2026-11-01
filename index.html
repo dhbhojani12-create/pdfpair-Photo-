@@ -3996,14 +3996,15 @@ async function gemFetch(path,key,body){let r;
   let j=null;try{j=await r.json()}catch(e){}
   if(!r.ok){const raw=(j&&j.error&&j.error.message)||("HTTP "+r.status);const ri=j&&j.error&&(j.error.details||[]).find(d=>/RetryInfo/.test(d["@type"]||""));
     let msg=raw;if(r.status===400&&/api key/i.test(raw))msg="Google rejected the AI key. Check that you pasted the whole key.";else if(r.status===403)msg="This key is not allowed to use Gemini ("+raw+").";else if(r.status===429)msg="Google’s free limit was reached ("+raw.slice(0,140)+").";
-    throw Object.assign(new Error(msg),{code:r.status,retry:ri?parseFloat(ri.retryDelay)||0:0,raw})}
+    throw Object.assign(new Error(msg),{code:r.status,retry:ri?parseFloat(ri.retryDelay)||0:0,raw:raw+" "+JSON.stringify((j&&j.error&&j.error.details)||[])})}
   return j}
 async function gemModel(key,fresh){const a=AI.get();if(!fresh&&a.model&&a.modelKey===key.slice(-6))return a.model;
   const j=await gemFetch("models?pageSize=200",key);
   const ok=(j.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes("generateContent")&&/flash/i.test(m.name)&&!/(tts|live|image|audio|embed|thinking|exp|vision|transcribe)/i.test(m.name));
   const ver=m=>{const v=m.name.match(/(\d+(?:\.\d+)?)/);return v?+v[1]:0},score=m=>ver(m)*10-(/lite/i.test(m.name)?3:0)-(/preview/i.test(m.name)?2:0)-(/\d{3,}$/.test(m.name)?1:0);
   ok.sort((x,y)=>score(y)-score(x));if(!ok.length)throw Object.assign(new Error("Your key works, but no Gemini Flash model is available to it."),{code:"model"});
-  const name=ok[0].name.replace(/^models\//,"");AI.set({model:name,modelKey:key.slice(-6)});return name}
+  const list=ok.map(m=>m.name.replace(/^models\//,""));AI.set({model:list[0],models:list,modelKey:key.slice(-6)});return list[0]}
+const AI_CHUNK=300000,AI_RPM=4,AI_TPM=200000; // free tier seen: 5 requests/min, 250K tokens/min, 20 requests/day
 const AI_SYS=`You read pages of a study PDF used for the Indian CA exams (ICAI study material, past papers, MTPs, RTPs, coaching notes).
 Each input line is: ID [b] [xNN] text   — ID is page.line, [b] means bold, xNN is the left indent in % of page width.
 Find every question and every answer/solution and return them in reading order.
@@ -4027,20 +4028,32 @@ async function aiFind(qf,qt,af,at,prog,opt){const a=AI.get(),key=a.key;if(!key)t
   const seq=[],idOf=new Map(),chunks=[];let cur=[],len=0;
   for(const n of pages){const pp=P.get(n);if(!pp)continue;const ph=(S.pages[n-1]&&S.pages[n-1].h)||800;
     pp.content.slice().sort((x,y)=>x.y0-y.y0).forEach((l,i)=>{const tx=l.text.replace(/\s+/g," ").trim();if(!tx)return;const id=n+"."+(i+1);idOf.set(id,seq.length);seq.push({n,l,tx,id});
-      const row=id+(isBold(l)?" [b]":"")+" [x"+Math.round(l.x0*100)+"] "+tx.slice(0,170);cur.push(row);len+=row.length+1});
-    if(len>36000){chunks.push(cur);cur=[];len=0}}
+      const row=id+(isBold(l)?" [b]":"")+" [x"+Math.round(l.x0*100)+"] "+tx.slice(0,120);cur.push(row);len+=row.length+1});
+    if(len>AI_CHUNK){chunks.push(cur);cur=[];len=0}}
   if(cur.length)chunks.push(cur);
   if(!seq.length)return{error:"notext"};
-  const raw=[];let prevTail="";
-  for(let c=0;c<chunks.length;c++){const head=(prevTail?"For context, the previous pages ended with "+prevTail+".\n":"")+(opt.mcq?"":"Skip multiple-choice questions (MCQs) and their answers.\n")+"Lines:\n";
-    const body={systemInstruction:{parts:[{text:AI_SYS}]},contents:[{role:"user",parts:[{text:head+chunks[c].join("\n")}]}],generationConfig:{temperature:0,responseMimeType:"application/json",responseSchema:AI_SCHEMA}};
-    let j=null;for(let tries=0;;tries++){prog("AI is reading part "+(c+1)+" of "+chunks.length,.2+.75*c/chunks.length);
-      try{j=await gemFetch("models/"+model+":generateContent",key,body);break}
-      catch(e){if(e.code===429&&tries<3&&!/per ?day|daily/i.test(e.raw||"")){const w=Math.min(65,Math.max(8,e.retry||20));LOG.add("429, waiting "+w+"s");for(let s=w;s>0;s--){prog("Google’s free limit: waiting "+s+"s, then part "+(c+1)+" of "+chunks.length,.2+.75*c/chunks.length);await new Promise(r=>setTimeout(r,1000))}continue}
-        if(e.code===404&&tries<1){AI.set({model:""});throw e}throw e}}
-    const txt=j&&j.candidates&&j.candidates[0]&&j.candidates[0].content&&(j.candidates[0].content.parts||[]).map(p=>p.text||"").join("");
-    let items=[];try{items=JSON.parse(txt||"{}").items||[]}catch(e){LOG.add("part "+(c+1)+": could not read the AI answer: "+String(txt).slice(0,200))}
-    LOG.add("part "+(c+1)+": "+items.length+" items");raw.push(...items);const lt=items.at(-1);prevTail=lt?(lt.kind==="q"?"question ":"the answer to question ")+lt.label+(lt.group?" ("+lt.group+")":"")+(/CONT/i.test(lt.end||"")?", which continues onto these pages":""):prevTail}
+  const raw=[];let prevTail="",models=(AI.get().models||[model]).slice(),mi=Math.max(0,models.indexOf(model)),done=0;const total=chunks.reduce((x,c)=>x+c.length,0);
+  LOG.add(chunks.length+" request(s) planned for "+pages.length+" pages");
+  const hist=[];const pace=async(est,what)=>{for(;;){const now=Date.now();while(hist.length&&now-hist[0].t>61000)hist.shift();const tok=hist.reduce((x,h)=>x+h.tok,0);
+      if(hist.length<AI_RPM&&tok+est<=AI_TPM)break;const w=Math.ceil((61000-(now-hist[0].t))/1000);prog("Pacing for Google’s free limit: "+w+"s, then "+what,.2+.75*done/total);await new Promise(r=>setTimeout(r,1000))}};
+  const queue=chunks.slice();
+  while(queue.length){const ch=queue.shift(),what="part "+(chunks.length-queue.length)+" of "+chunks.length;
+    const head=(prevTail?"For context, the previous pages ended with "+prevTail+".\n":"")+(opt.mcq?"":"Skip multiple-choice questions (MCQs) and their answers.\n")+"Lines:\n";
+    const text=head+ch.join("\n"),est=Math.ceil((text.length+AI_SYS.length)/3.2);
+    const body={systemInstruction:{parts:[{text:AI_SYS}]},contents:[{role:"user",parts:[{text}]}],generationConfig:{temperature:0,maxOutputTokens:32768,responseMimeType:"application/json",responseSchema:AI_SCHEMA}};
+    let j=null;for(let tries=0;;tries++){await pace(est,what);prog("AI is reading "+what+(ch.length>1?" (lines "+ch[0].split(" ")[0]+" to "+ch.at(-1).split(" ")[0]+")":""),.2+.75*done/total);hist.push({t:Date.now(),tok:est});
+      try{j=await gemFetch("models/"+models[mi]+":generateContent",key,body);break}
+      catch(e){const daily=/per ?day|PerDay|daily/i.test(e.raw||"");
+        if(e.code===429&&daily&&mi+1<models.length){LOG.add("daily limit on "+models[mi]+", switching to "+models[mi+1]);mi++;continue}
+        if(e.code===429&&daily)throw Object.assign(new Error("Google’s free daily limit for your key is used up (about 20 AI requests a day). Try again tomorrow, or use PaperPair’s own methods for now."),{code:429});
+        if(e.code===429&&tries<4){const w=Math.min(65,Math.max(8,e.retry||20));LOG.add("429, waiting "+w+"s");for(let t=w;t>0;t--){prog("Google asked to slow down: waiting "+t+"s, then "+what,.2+.75*done/total);await new Promise(r=>setTimeout(r,1000))}continue}
+        if(e.code===400&&/maxOutputTokens|max_output/i.test(e.raw||"")&&body.generationConfig.maxOutputTokens){delete body.generationConfig.maxOutputTokens;continue}
+        if(e.code===404)AI.set({model:"",models:[]});throw e}}
+    const cand=j&&j.candidates&&j.candidates[0],txt=cand&&cand.content&&(cand.content.parts||[]).map(p=>p.text||"").join("");
+    let items=null;try{items=JSON.parse(txt||"{}").items||[]}catch(e){items=null}
+    if((items===null||(cand&&cand.finishReason==="MAX_TOKENS"))&&ch.length>40){const h=Math.ceil(ch.length/2);LOG.add(what+": the AI answer was cut off, splitting this part in two");queue.unshift(ch.slice(0,h),ch.slice(h));continue}
+    if(items===null){LOG.add(what+": could not read the AI answer: "+String(txt).slice(0,200));items=[]}
+    done+=ch.length;LOG.add(what+": "+items.length+" items");raw.push(...items);const lt=items.at(-1);if(lt)prevTail=(lt.kind==="q"?"question ":"the answer to question ")+lt.label+(lt.group?" ("+lt.group+")":"")+(/CONT/i.test(lt.end||"")?", which continues onto these pages":"")}
   // positions, ends
   let it=raw.map(x=>({...x,si:idOf.get(String(x.start).trim()),ei:idOf.get(String(x.end).trim())})).filter(x=>x.si!=null&&(x.kind==="q"||x.kind==="a"));
   if(!opt.mcq)it=it.filter(x=>!/mcq|multiple/i.test(x.group||""));
