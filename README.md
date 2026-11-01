@@ -7,4 +7,4 @@ Pairs questions and answers from ICAI-style PDFs, with a library, repeats, revis
 - Export-to-PDF needs the jsPDF library from cdnjs, which is cached after the first online use.
 - Personal study PDFs are not stored in this repo.
 
-Live app: https://dhbhojani12-create.github.io/pdfpair-photo-/
+Live app: https://dhbhojani12-create.github.io/pdfpair-Photo-/
