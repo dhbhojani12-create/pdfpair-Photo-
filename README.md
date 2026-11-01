@@ -6,3 +6,5 @@ Pairs questions and answers from ICAI-style PDFs, with a library, repeats, revis
 - **Source:** `source/v2.html` is the editable template; `source/build.py` builds it. Tests are in `source/tests`.
 - Export-to-PDF needs the jsPDF library from cdnjs, which is cached after the first online use.
 - Personal study PDFs are not stored in this repo.
+
+Live app: https://dhbhojani12-create.github.io/pdfpair-photo-/
