@@ -1248,7 +1248,7 @@ tr.kbsel{outline:none!important}tr.kbsel>td{background:#FFF6C2!important;box-sha
 #xrPanel p{margin:0;color:var(--muted)}#xrPanel .xrh{display:flex;justify-content:space-between;align-items:center;gap:8px}#xrPanel .xrl{background:#f6f7f9;border-radius:10px;padding:8px 10px;font-weight:600}#xrPanel .xrb{display:flex;flex-direction:column;gap:6px}#xrPanel .xw{color:#8a5a00}
 .xrT{position:absolute;pointer-events:none;z-index:22}.xrT-q{background:rgba(29,78,216,.10);border-left:3px solid #1d4ed8}.xrT-a{background:rgba(190,24,93,.09);border-left:3px solid #be185d}.xrT-sq,.xrT-sa{border:2px solid;border-radius:3px}.xrT-sq{border-color:#1d4ed8}.xrT-sa{border-color:#be185d}.xrT-sq .xrt,.xrT-sa .xrt{position:absolute;right:100%;top:50%;transform:translateY(-50%);margin-right:3px;font:700 10px var(--f-body);color:#fff;border-radius:5px;padding:1px 6px;white-space:nowrap}.xrT-sq .xrt{background:#1d4ed8}.xrT-sa .xrt{background:#be185d}
 .xrT-box{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line,#e5e7eb);border-radius:12px;padding:10px 12px;background:#f8faff}.xrT-box label{display:flex;flex-direction:column;gap:2px;font-size:12.5px;color:var(--muted)}.xrT-box label.chk{flex-direction:row;align-items:center;gap:8px}.xrT-box input[type=text]{height:36px;border:1px solid var(--line,#d7dbe2);border-radius:8px;padding:0 10px;font:inherit;color:var(--ink);background:#fff}.xtch{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}.xtR{background:#fff;border-radius:10px;padding:8px 10px;font-size:13px;line-height:1.55}.xtR b{font-weight:700}
-.xtgr{display:grid;grid-template-columns:1fr 1fr;gap:8px}.xrT-box input[type=text]{width:100%;box-sizing:border-box;min-width:0}.xtgr>label{min-width:0}.xrT-fl{outline:3px solid #f59e0b;outline-offset:3px;box-shadow:0 0 0 6px rgba(245,158,11,.25);z-index:30}.xtchips{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}.xtchip{all:unset;box-sizing:border-box;min-height:28px;padding:2px 9px;border:1px solid #d7dbe2;border-radius:14px;background:#fff;font-size:12px;cursor:pointer;color:var(--ink)}.xtchip:hover,.xtchip.on{background:#fdf1d8;border-color:#d79a1f}.xtchip.more{color:#1d4ed8}.xtprob{margin-top:6px}.xtj{margin-top:8px;border-top:1px solid var(--line,#e5e7eb);padding-top:6px;display:flex;flex-direction:column;gap:4px}.xtnote{font-size:12px;margin:0}</style>
+.xtgr{display:grid;grid-template-columns:1fr 1fr;gap:8px}.xrT-box input[type=text]{width:100%;box-sizing:border-box;min-width:0}.xtgr>label{min-width:0}.xrT-fl{outline:3px solid #f59e0b;outline-offset:3px;box-shadow:0 0 0 6px rgba(245,158,11,.25);z-index:30}.xtchips{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}.xtchip{all:unset;box-sizing:border-box;min-height:28px;padding:2px 9px;border:1px solid #d7dbe2;border-radius:14px;background:#fff;font-size:12px;cursor:pointer;color:var(--ink)}.xtchip:hover,.xtchip.on{background:#fdf1d8;border-color:#d79a1f}.xtchip.more{color:#1d4ed8}.xtprob{margin-top:6px}.xtj{margin-top:8px;border-top:1px solid var(--line,#e5e7eb);padding-top:6px;display:flex;flex-direction:column;gap:4px}.xtnote{font-size:12px;margin:0}.aibox{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:10px;background:var(--raise,#f7f8f9);display:flex;flex-direction:column;gap:6px}.aik{display:flex;flex-direction:column;gap:6px}.aibtn{display:flex;gap:12px;align-items:center}.aibtn a{color:var(--q,#2F6FDE);font-weight:600}.ainote{margin:0;font-size:12.5px;color:var(--muted);line-height:1.45}</style>
 
 <div class="app">
   <nav class="inknav" id="nav" aria-label="Main">
@@ -3920,7 +3920,7 @@ async function openAutoDetect(){await loadRecipes();
   const exList=man.slice(-30).map(p=>'<label class="chk"><input type="checkbox" data-ex="'+p.id+'" checked> '+esc(fullLabel(p))+' <span style="color:var(--faint)">(p.'+p.q[0].page+(p.a[0]?" → p."+p.a[0].page:", no answer")+')</span></label>').join("");
   gm("Find more questions",'<div id="adAuto"><p style="margin:0 0 10px;color:var(--muted);font-size:14px;line-height:1.5">PaperPair reads this PDF, works out how its questions and answers are laid out, and shows you what it understood. It tries these in order until one works:</p>'+
       '<ol class="adsteps"><li><b>Known layouts</b> <span>ICAI papers, MTPs, RTPs, modules</span></li><li><b>Your marked examples</b> <span>'+(man.length?man.length+" marked so far":"none marked yet")+'</span></li><li><b>Numbering</b> <span>1. 2. 3. or (a) (b) (c)</span></li></ol>'+
-      '<label class="chk" style="margin-top:8px"><input type="checkbox" id="adAutoMcq"'+(exOpt.mcq&&localStorage.getItem("pp.exOpt")?" checked":"")+'> Include case-scenario MCQs <span style="color:var(--faint)">(skipped by default)</span></label><label class="chk"><input type="checkbox" id="adRedoA"> Redo boxes of questions found earlier (keeps stars, tags, notes)</label></div>'+
+      ''+aiPanelHTML()+'<label class="chk" style="margin-top:8px"><input type="checkbox" id="adAutoMcq"'+(exOpt.mcq&&localStorage.getItem("pp.exOpt")?" checked":"")+'> Include case-scenario MCQs <span style="color:var(--faint)">(skipped by default)</span></label><label class="chk"><input type="checkbox" id="adRedoA"> Redo boxes of questions found earlier (keeps stars, tags, notes)</label></div>'+
     '<div class="seg full" role="group" id="adSeg" hidden><button data-m="auto" aria-pressed="true">Auto</button><button data-m="exam" aria-pressed="'+(adMode==="exam")+'">ICAI format</button><button data-m="learn" aria-pressed="'+(adMode==="learn")+'">My examples</button><button data-m="kw" aria-pressed="'+(adMode==="kw")+'">Keywords</button><button data-m="std" aria-pressed="'+(adMode==="std")+'">Numbering</button></div>'+
     '<div id="adKw"'+(adMode==="kw"?"":" hidden")+'><p style="margin:0 0 8px;color:var(--muted);font-size:13.5px">Tell PaperPair how questions and answers start in this PDF. Type the words as printed, with any number: it stands for every number. Separate options with a comma.</p>'+
       '<label class="kwf"><span>Each question starts with</span><input id="adKq" placeholder="Question 1, Q.1, Illustration 1" autocomplete="off"></label>'+
@@ -3978,9 +3978,93 @@ async function numberProfile(qf,qt){const pages=[];for(let n=qf;n<=qt;n++)pages.
   try{const P=await readPages(pages,null,true);for(const n of pages){const pp=P.get(n);if(!pp)continue;for(const l of pp.content){if(/^\s*\(?[1-9]\d?\s*[.)]\s*\S/.test(l.text)){tot++;const k=Math.round(l.x0*50)/50;xs.set(k,(xs.get(k)||0)+1)}
     if(l.text.length<60&&/^\s*(part\s*(i{1,3}|[1-3a-c])\b|answers?\s+to\b|(suggested\s+)?answers?\s*$|solutions?\s*$)/i.test(l.text)&&heads.length<6)heads.push("p."+n+" “"+l.text.trim().slice(0,40)+"”")}}}catch(e){}
   const pos=[...xs].filter(([,c])=>c>=2).sort((a,b)=>b[1]-a[1]);return{tot,pos,heads}}
+/* ---- AI Find: Google Gemini (free key) reads the numbered lines and says where each question and answer starts and ends.
+   PaperPair keeps its own exact line positions, so the boxes are drawn by PaperPair, not by the AI. ---- */
+const AI={get(){try{return JSON.parse(localStorage.getItem("pp.ai")||"{}")}catch(e){return{}}},set(o){try{localStorage.setItem("pp.ai",JSON.stringify({...AI.get(),...o}))}catch(e){}}};
+const GEM="https://generativelanguage.googleapis.com/v1beta/";
+function aiOn(){const a=AI.get();return!!(a.on&&a.key)}
+async function gemFetch(path,key,body){let r;
+  try{r=await fetch(GEM+path,{method:body?"POST":"GET",headers:body?{"x-goog-api-key":key,"Content-Type":"application/json"}:{"x-goog-api-key":key},body:body?JSON.stringify(body):undefined})}
+  catch(e){throw Object.assign(new Error("Could not reach Google’s AI service. Check your internet connection. If you are using the copy of PaperPair inside claude.ai, it may block outside services: use the installed app instead."),{code:"net"})}
+  let j=null;try{j=await r.json()}catch(e){}
+  if(!r.ok){const raw=(j&&j.error&&j.error.message)||("HTTP "+r.status);const ri=j&&j.error&&(j.error.details||[]).find(d=>/RetryInfo/.test(d["@type"]||""));
+    let msg=raw;if(r.status===400&&/api key/i.test(raw))msg="Google rejected the AI key. Check that you pasted the whole key.";else if(r.status===403)msg="This key is not allowed to use Gemini ("+raw+").";else if(r.status===429)msg="Google’s free limit was reached ("+raw.slice(0,140)+").";
+    throw Object.assign(new Error(msg),{code:r.status,retry:ri?parseFloat(ri.retryDelay)||0:0,raw})}
+  return j}
+async function gemModel(key,fresh){const a=AI.get();if(!fresh&&a.model&&a.modelKey===key.slice(-6))return a.model;
+  const j=await gemFetch("models?pageSize=200",key);
+  const ok=(j.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes("generateContent")&&/flash/i.test(m.name)&&!/(tts|live|image|audio|embed|thinking|exp|vision|transcribe)/i.test(m.name));
+  const ver=m=>{const v=m.name.match(/(\d+(?:\.\d+)?)/);return v?+v[1]:0},score=m=>ver(m)*10-(/lite/i.test(m.name)?3:0)-(/preview/i.test(m.name)?2:0)-(/\d{3,}$/.test(m.name)?1:0);
+  ok.sort((x,y)=>score(y)-score(x));if(!ok.length)throw Object.assign(new Error("Your key works, but no Gemini Flash model is available to it."),{code:"model"});
+  const name=ok[0].name.replace(/^models\//,"");AI.set({model:name,modelKey:key.slice(-6)});return name}
+const AI_SYS=`You read pages of a study PDF used for the Indian CA exams (ICAI study material, past papers, MTPs, RTPs, coaching notes).
+Each input line is: ID [b] [xNN] text   — ID is page.line, [b] means bold, xNN is the left indent in % of page width.
+Find every question and every answer/solution and return them in reading order.
+For each item give:
+- kind: "q" for a question, "a" for an answer or solution.
+- start: ID of its first line (the line with its number or heading, e.g. "Question 3B", "Illustration 10", "5.", "Q.2", "Solution", "Answer 3B", "Ans. 5").
+- end: ID of its last line. Stop before the next question or answer, before section/chapter headings, and before separator lines such as ***** (do not include them). Use "CONT" if it is still going on at the last line given.
+- label: the number that links a question to its answer, written short: "3B", "10", "2(a)", "5". For an answer, give the label of the question it answers; for an unnumbered "Solution" right after a question, use that question's label.
+- group: the question series, e.g. "Illustration", "Test Your Knowledge", "Practical Question", "Question", "MCQ", plus the chapter or unit name if shown, e.g. "Test Your Knowledge · Ind AS 103".
+Rules: sub-parts (a), (b), (i), (ii) stay inside their question or answer, unless each part has its own separate answer elsewhere. Lists, table rows, steps and workings inside a question or answer are not new items. Ignore contents pages, learning outcomes, headings that are not questions, and repeated headers/footers. If the first lines continue an item that started on earlier pages, do not report them.`;
+const AI_SCHEMA={type:"OBJECT",properties:{items:{type:"ARRAY",items:{type:"OBJECT",properties:{kind:{type:"STRING",enum:["q","a"]},start:{type:"STRING"},end:{type:"STRING"},label:{type:"STRING"},group:{type:"STRING"}},required:["kind","start","end","label"]}}},required:["items"]};
+function aiBoxes(seq,i,j){const by=new Map();for(let k=i;k<=j;k++){const o=seq[k];if(!by.has(o.n))by.set(o.n,[]);by.get(o.n).push(o.l)}
+  return[...by].map(([n,ls])=>{const x0=Math.min(...ls.map(l=>l.x0)),x1=Math.max(...ls.map(l=>l.x1)),y0=Math.min(...ls.map(l=>l.y0)),y1=Math.max(...ls.map(l=>l.y1)),x=clamp(x0-.008,0,1),y=clamp(y0-.003,0,1);
+    return{page:n,x:r4(x),y:r4(y),w:r4(Math.min(.98,x1+.008)-x),h:r4(Math.max(.012,y1+.003-y))}})}
+const aiNorm=s=>String(s||"").toUpperCase().replace(/\b(QUESTION|QUES|ILLUSTRATION|ILLUS|ANSWER|ANS|SOLUTION|SOL|PQ|TYK|NO)\b\.?/g,"").replace(/[\s.:#]+/g,"").replace(/^Q(?=\d)/,"").replace(/^A(?=\d)/,"");
+async function aiFind(qf,qt,af,at,prog,opt){const a=AI.get(),key=a.key;if(!key)throw Object.assign(new Error("No AI key saved."),{code:"nokey"});
+  const pages=[];const add=(f,t)=>{for(let n=f;n<=t;n++)if(!pages.includes(n))pages.push(n)};add(qf,qt);if(af)add(af,at);pages.sort((x,y)=>x-y);
+  LOG.sec("AI FIND · Gemini · pages "+pages[0]+"–"+pages.at(-1));
+  prog("Checking your AI key",.02);const model=await gemModel(key);LOG.add("model "+model);
+  const P=await readPages(pages,(m,f)=>prog(m,.03+f*.15),true);
+  const seq=[],idOf=new Map(),chunks=[];let cur=[],len=0;
+  for(const n of pages){const pp=P.get(n);if(!pp)continue;const ph=(S.pages[n-1]&&S.pages[n-1].h)||800;
+    pp.content.slice().sort((x,y)=>x.y0-y.y0).forEach((l,i)=>{const tx=l.text.replace(/\s+/g," ").trim();if(!tx)return;const id=n+"."+(i+1);idOf.set(id,seq.length);seq.push({n,l,tx,id});
+      const row=id+(isBold(l)?" [b]":"")+" [x"+Math.round(l.x0*100)+"] "+tx.slice(0,170);cur.push(row);len+=row.length+1});
+    if(len>36000){chunks.push(cur);cur=[];len=0}}
+  if(cur.length)chunks.push(cur);
+  if(!seq.length)return{error:"notext"};
+  const raw=[];let prevTail="";
+  for(let c=0;c<chunks.length;c++){const head=(prevTail?"For context, the previous pages ended with "+prevTail+".\n":"")+(opt.mcq?"":"Skip multiple-choice questions (MCQs) and their answers.\n")+"Lines:\n";
+    const body={systemInstruction:{parts:[{text:AI_SYS}]},contents:[{role:"user",parts:[{text:head+chunks[c].join("\n")}]}],generationConfig:{temperature:0,responseMimeType:"application/json",responseSchema:AI_SCHEMA}};
+    let j=null;for(let tries=0;;tries++){prog("AI is reading part "+(c+1)+" of "+chunks.length,.2+.75*c/chunks.length);
+      try{j=await gemFetch("models/"+model+":generateContent",key,body);break}
+      catch(e){if(e.code===429&&tries<3&&!/per ?day|daily/i.test(e.raw||"")){const w=Math.min(65,Math.max(8,e.retry||20));LOG.add("429, waiting "+w+"s");for(let s=w;s>0;s--){prog("Google’s free limit: waiting "+s+"s, then part "+(c+1)+" of "+chunks.length,.2+.75*c/chunks.length);await new Promise(r=>setTimeout(r,1000))}continue}
+        if(e.code===404&&tries<1){AI.set({model:""});throw e}throw e}}
+    const txt=j&&j.candidates&&j.candidates[0]&&j.candidates[0].content&&(j.candidates[0].content.parts||[]).map(p=>p.text||"").join("");
+    let items=[];try{items=JSON.parse(txt||"{}").items||[]}catch(e){LOG.add("part "+(c+1)+": could not read the AI answer: "+String(txt).slice(0,200))}
+    LOG.add("part "+(c+1)+": "+items.length+" items");raw.push(...items);const lt=items.at(-1);prevTail=lt?(lt.kind==="q"?"question ":"the answer to question ")+lt.label+(lt.group?" ("+lt.group+")":"")+(/CONT/i.test(lt.end||"")?", which continues onto these pages":""):prevTail}
+  // positions, ends
+  let it=raw.map(x=>({...x,si:idOf.get(String(x.start).trim()),ei:idOf.get(String(x.end).trim())})).filter(x=>x.si!=null&&(x.kind==="q"||x.kind==="a"));
+  if(!opt.mcq)it=it.filter(x=>!/mcq|multiple/i.test(x.group||""));
+  it.sort((x,y)=>x.si-y.si);it=it.filter((x,i)=>!i||x.si!==it[i-1].si);
+  it.forEach((x,i)=>{const lim=i+1<it.length?it[i+1].si-1:seq.length-1;x.ei=x.ei!=null&&x.ei>=x.si?Math.min(x.ei,lim):lim;x.key=aiNorm(x.label);x.box=aiBoxes(seq,x.si,x.ei)});
+  // pair each answer with the nearest earlier unpaired question of the same label (keeps chapters apart); then any unpaired one
+  const qs=it.filter(x=>x.kind==="q"),pairs=new Map();let orph=0;
+  for(const an of it.filter(x=>x.kind==="a")){let q=null;for(let k=qs.length-1;k>=0;k--){const c=qs[k];if(c.si<an.si&&!pairs.has(c)&&c.key===an.key){q=c;break}}
+    if(!q)q=qs.find(c=>!pairs.has(c)&&c.key===an.key)||null;
+    if(!q){const k=it.indexOf(an),pv=k>0?it[k-1]:null;if(pv&&pv.kind==="q"&&!pairs.has(pv))q=pv} // an unnumbered “Solution” right after its question
+    if(q)pairs.set(q,an);else{orph++;orphAdd(an.label||null,an.box,"AI found this answer but no question with the label “"+an.label+"”")}}
+  const out=qs.map((q,i)=>{const an=pairs.get(q);const m=String(q.label).match(/\d+/);return{num:m?+m[0]:i+1,label:String(q.label||i+1).slice(0,24),q:q.box,a:an?an.box:[],tags:q.group?[String(q.group).split("·")[0].trim()].filter(Boolean):undefined}});
+  LOG.add("AI result: "+out.length+" questions, "+pairs.size+" with answers, "+orph+" answers without a question");
+  prog("Done",1);return{pairs:out,orphans:orph,missing:[],via:"AI ("+model+")"}}
+function aiPanelHTML(){const a=AI.get();
+  return'<div class="aibox"><label class="chk"><input type="checkbox" id="adAI"'+(a.on?" checked":"")+'> <b>Use AI to find questions</b> <span style="color:var(--faint)">(Google Gemini, free key)</span></label>'+
+    '<div class="aik"'+(a.on?"":" hidden")+'><label class="kwf"><span>Your Gemini key</span><input id="adAIKey" type="password" autocomplete="off" spellcheck="false" placeholder="Paste the key from Google AI Studio" value="'+esc(a.key||"")+'"></label>'+
+    '<div class="aibtn"><a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Get a free key</a><button type="button" class="btn" id="adAITest">Test key</button></div>'+
+    '<p class="ainote" id="adAISt">'+(a.model?"Ready · model "+esc(a.model):"Stored only on this device.")+'</p>'+
+    '<p class="ainote">The page text of this PDF is sent to Google. On the free tier Google may use it to improve its products, so use it for study material, not private notes. If the AI can’t be reached or its free limit runs out, PaperPair uses its own methods below.</p></div></div>'}
+document.addEventListener("change",e=>{if(e.target.id==="adAI"){AI.set({on:e.target.checked});const k=document.querySelector(".aibox .aik");if(k)k.hidden=!e.target.checked;if(e.target.checked&&!AI.get().key){const f=$("#adAIKey");if(f)f.focus()}}});
+document.addEventListener("input",e=>{if(e.target.id==="adAIKey"){AI.set({key:e.target.value.trim(),model:""});const s=$("#adAISt");if(s)s.textContent="Stored only on this device."}});
+document.addEventListener("click",async e=>{if(e.target.id!=="adAITest")return;const s=$("#adAISt"),k=AI.get().key;if(!k){s.textContent="Paste your key first.";return}
+  s.textContent="Checking…";try{const m=await gemModel(k,true);s.textContent="Key works · model "+m}catch(er){s.textContent=er.message}});
 async function runAuto(qf,qt,af,at,prog,over){
   const opt={...exOpt,mcq:$("#adAutoMcq")?$("#adAutoMcq").checked:exOpt.mcq,docName:S.doc&&S.doc.name,...(over||{})};if(!over){exOpt.mcq=opt.mcq;try{localStorage.setItem("pp.exOpt",JSON.stringify(exOpt))}catch(e){}}
   const force=!!S.autoForce;S.autoForce=false;const att=[];let prof=null;const getProf=async()=>prof||(prof=await numberProfile(qf,qt));
+  // 0 · AI, when switched on (never for the silent X-ray read)
+  let aiErr=null;if(!over&&aiOn()){try{const ra=await aiFind(qf,qt,af,at,prog,opt);if(ra.error==="notext")return ra;if(ra.pairs&&ra.pairs.length)return ra;aiErr="The AI found no questions on these pages."}
+    catch(e){LOG.add("AI ERROR: "+(e.stack||e.message));aiErr=e.message}
+    if(aiErr){att.push({t:"AI (Gemini)",ok:false,why:aiErr});toast("AI: "+aiErr.slice(0,160)+" Trying PaperPair’s own methods.")}}
   // 1 · known layouts
   LOG.sec("AUTO 1 · known layouts");let r=null;
   try{r=await presetExam(qf,qt,opt,(m,f)=>prog(m,f*.5))}catch(e){LOG.add("ERROR in known layouts: "+(e.stack||e.message));r={error:"crash",msg:e.message}}
