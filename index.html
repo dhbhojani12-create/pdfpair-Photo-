@@ -2354,6 +2354,7 @@ function pgCount(bs){return new Set((bs||[]).map(r=>r.page)).size}
 function chkStats(list){const a=list.filter(p=>p.a&&p.a.length&&!isMcqPair(p)).map(p=>pgCount(p.a)).sort((x,y)=>x-y);return{medA:a.length?a[a.length>>1]:1}}
 function reviewFlags(p,list,st){const out=[];if(!p||p.ok)return out;st=st||chkStats(list);const mcq=isMcqPair(p);
   const qn=pgCount(p.q),an=pgCount(p.a);
+  if(p.xflag&&p.xflag.length)out.push(...p.xflag);
   if(!p.q.length)out.push("no question box");
   if(!p.a.length)out.push("no answer found");
   if(qn>2)out.push("question runs "+qn+" pages");
@@ -4086,11 +4087,37 @@ document.addEventListener("change",e=>{if(e.target.id==="adAIModel"){AI.set({pic
 document.addEventListener("input",e=>{if(e.target.id==="adAIKey"){AI.set({key:e.target.value.trim(),model:""});const s=$("#adAISt");if(s)s.textContent="Stored only on this device."}});
 document.addEventListener("click",async e=>{if(e.target.id!=="adAITest")return;const s=$("#adAISt"),k=AI.get().key;if(!k){s.textContent="Paste your key first.";return}
   s.textContent="Checking…";try{const m=await gemModel(k,true);const sel=$("#adAIModel");if(sel)sel.innerHTML=aiModelOpts();s.textContent="Key works · "+(AI.get().models||[]).length+" models available. If one is often busy, choose another above."}catch(er){s.textContent=er.message}});
+
+/* ---- cross-check: PaperPair's own methods read the same pages; where they and the AI disagree, the question is flagged "to check" ---- */
+async function aiCrossCheck(ra,qf,qt,af,at,prog,opt){const bak=FIND_ORPH,rec=S.suggRecipe;let pp=null,how="";
+  try{FIND_ORPH=[];prog("Checking the AI’s result with PaperPair’s own methods",.97);LOG.sec("CROSS-CHECK · PaperPair’s own methods");
+    try{const r=await presetExam(qf,qt,{...opt},()=>{});if(r.pairs&&r.pairs.length){pp=r.pairs;how="the known ICAI layout"}}catch(e){LOG.add("known layouts: "+e.message)}
+    if(!pp){try{const d=await detectQA(qf,qt,af,at,()=>{});const wa=d.error?0:d.pairs.filter(x=>x.a.length).length;if(!d.error&&d.pairs.length>=3&&wa>=Math.max(3,d.pairs.length*.5)){pp=d.pairs;how="numbering"}}catch(e){LOG.add("numbering: "+e.message)}}}
+  finally{FIND_ORPH=bak;S.suggRecipe=rec}
+  if(!pp||pp.length<3){ra.check={none:true};LOG.add("PaperPair’s own methods found nothing reliable here, so the AI result is not cross-checked");return}
+  const end=bs=>{const b=bs.at(-1);return{page:b.page,y:b.y+b.h}},start=bs=>bs[0];
+  const sameStart=(a,b)=>a&&b&&a.page===b.page&&Math.abs(a.y-b.y)<.025;
+  const farEnd=(a,b)=>a.page!==b.page||Math.abs(a.y-b.y)>.045;
+  const used=new Set();let agree=0,flagged=0,onlyAI=0;
+  for(const p of ra.pairs){const m=pp.find(o=>!used.has(o)&&o.q.length&&p.q.length&&sameStart(start(o.q),start(p.q)));const f=[];
+    if(!m){onlyAI++;f.push("only the AI found this question; PaperPair’s own check ("+how+") did not");p.xflag=f;flagged++;continue}
+    used.add(m);
+    if(farEnd(end(p.q),end(m.q)))f.push("AI and PaperPair end the question at different places (PaperPair: p."+end(m.q).page+")");
+    if(p.a.length&&m.a.length){if(!sameStart(start(p.a),start(m.a)))f.push("AI and PaperPair found different answers (PaperPair: p."+start(m.a).page+")");else if(farEnd(end(p.a),end(m.a)))f.push("AI and PaperPair end the answer at different places (PaperPair: p."+end(m.a).page+")")}
+    else if(!p.a.length&&m.a.length){p.a=m.a.map(b=>({...b}));f.push("the AI found no answer; PaperPair’s answer was used")}
+    else if(p.a.length&&!m.a.length)f.push("PaperPair found no answer for this one; only the AI did");
+    if(f.length){p.xflag=f;flagged++}else agree++}
+  const missed=pp.filter(o=>!used.has(o)&&o.q.length&&!ra.pairs.some(p=>p.q.length&&p.q.some(b=>o.q.some(c=>b.page===c.page&&Math.max(0,Math.min(b.y+b.h,c.y+c.h)-Math.max(b.y,c.y))>.5*Math.min(b.h,c.h)))));
+  for(const o of missed)ra.pairs.push({num:o.num,label:o.label,q:o.q,a:o.a||[],tags:o.tags,xflag:["the AI missed this question; PaperPair’s own check ("+how+") found it"]});
+  const pos=p=>{const b=p.q[0]||p.a[0];return b.page*10+b.y};ra.pairs.sort((x,y)=>pos(x)-pos(y));
+  ra.check={agree,flagged:flagged+missed.length,onlyAI,missed:missed.length,how};
+  LOG.add("cross-check with "+how+": "+agree+" agree, "+flagged+" disagree, "+missed.length+" found only by PaperPair")}
 async function runAuto(qf,qt,af,at,prog,over){
   const opt={...exOpt,mcq:$("#adAutoMcq")?$("#adAutoMcq").checked:exOpt.mcq,docName:S.doc&&S.doc.name,...(over||{})};if(!over){exOpt.mcq=opt.mcq;try{localStorage.setItem("pp.exOpt",JSON.stringify(exOpt))}catch(e){}}
   const force=!!S.autoForce;S.autoForce=false;const att=[];let prof=null;const getProf=async()=>prof||(prof=await numberProfile(qf,qt));
   // 0 · AI, when switched on (never for the silent X-ray read)
-  let aiErr=null;if(!over&&aiOn()){try{const ra=await aiFind(qf,qt,af,at,prog,opt);if(ra.error==="notext")return ra;if(ra.pairs&&ra.pairs.length)return ra;aiErr="The AI found no questions on these pages."}
+  let aiErr=null;if(!over&&aiOn()){try{const ra=await aiFind(qf,qt,af,at,prog,opt);if(ra.error==="notext")return ra;if(ra.pairs&&ra.pairs.length){try{await aiCrossCheck(ra,qf,qt,af,at,prog,opt)}catch(e){LOG.add("cross-check failed: "+e.message)}
+      const c=ra.check||{};ra.via+=c.none?" · not cross-checked (PaperPair’s own methods found nothing here)":" · cross-checked: "+c.agree+" agree, "+c.flagged+" to check";return ra}aiErr="The AI found no questions on these pages."}
     catch(e){LOG.add("AI ERROR: "+(e.stack||e.message));aiErr=e.message}
     if(aiErr){att.push({t:"AI (Gemini)",ok:false,why:aiErr});toast("AI: "+aiErr.slice(0,160)+" Trying PaperPair’s own methods.")}}
   // 1 · known layouts
@@ -4171,7 +4198,7 @@ async function runFind(){FIND_ORPH=[];
     if(!fresh.length&&S.suggRelabel&&S.suggRelabel.length){pushHist();let n2=0;for(const rl of S.suggRelabel){const ex=S.data.pairs.find(p=>p.label!==rl.label&&p.q.some(r=>r.page===rl.part.page&&Math.abs(r.y-rl.part.y)<.03));if(ex){ex.label=rl.label;n2++}}S.suggRelabel=[];
       if(n2){save();refreshAll();res.innerHTML='<div class="res"><b>No new questions, but '+n2+' marked questions were renamed</b><span>They now show their exam numbers, like Q'+esc(fresh[0]?fresh[0].label:(r.pairs.find(p=>p.label)||{}).label||"2(a)")+'.</span></div>';return}}
     if(!fresh.length){res.innerHTML='<div class="res"><b>No new questions found on these pages.</b><span>'+(r.pairs.length?"Everything found is already marked.":"Try another example, check the page range, or switch to the other method.")+'</span><span><button class="btn" id="adLogB">View log</button></span></div>';$("#adLogB").onclick=showLog;return}
-    S.sugg=fresh.map(p=>({id:uid(),num:p.num,label:p.label,q:p.q,a:p.a,tags:p.tags&&p.tags.length?p.tags.slice():undefined}));
+    S.sugg=fresh.map(p=>({id:uid(),num:p.num,label:p.label,q:p.q,a:p.a,tags:p.tags&&p.tags.length?p.tags.slice():undefined,xflag:p.xflag}));
     S.suggRelabel=r.pairs.filter(p=>p.label&&p.q.some(overlapsExisting)).map(p=>({part:p.q[0],label:p.label}));S.suggInfo={orphans:r.orphans||0,missing:r.missing||[],orph:FIND_ORPH.filter(o=>!o.parts.some(overlapsExisting)).map((o,i)=>({...o,id:"o"+i}))};
     $("#gModal").hidden=true;setMode("v");S.sgFocus=S.sugg[0].id;S.sgSel=null;const first=S.sugg[0].q[0]||S.sugg[0].a[0];goPage(first.page);refreshAll();
   }catch(e){(e&&e.closed||console.error(e));LOG.add("ERROR in search: "+(e.stack||e.message||e));res.innerHTML='<div class="res"><span class="w">Something went wrong while reading the pages: '+esc(e.message||e)+'</span></div>'}
@@ -4206,7 +4233,7 @@ function renderSbar(){
 }
 function acceptSugg(){
   const sg=S.sugg||[];if(!sg.length)return;pushHist();const box=b=>({id:uid(),page:b.page,x:r4(b.x),y:r4(b.y),w:r4(b.w),h:r4(b.h)});
-  for(const s of sg){const np={id:uid(),star:false,auto:true,q:s.q.map(box),a:s.a.map(box)};if(s.label)np.label=s.label;if(s.tags)np.tags=s.tags;S.data.pairs.push(np)}
+  for(const s of sg){const np={id:uid(),star:false,auto:true,q:s.q.map(box),a:s.a.map(box)};if(s.label)np.label=s.label;if(s.tags)np.tags=s.tags;if(s.xflag&&s.xflag.length)np.xflag=s.xflag.slice();S.data.pairs.push(np)}
   for(const rl of S.suggRelabel||[]){const ex=S.data.pairs.find(p=>p.label!==rl.label&&p.q.some(r=>r.page===rl.part.page&&Math.abs(r.y-rl.part.y)<.03));if(ex)ex.label=rl.label}S.suggRelabel=[];
   if(S.suggRecipe){const rcp=S.suggRecipe;S.suggRecipe=null;saveRecipe(rcp.q,rcp.a,rcp.key,rcp.from)}
   const n=sg.length;S.sugg=[];sortPairs();computeLast();save();refreshAll();const nC=chkList().length;toast("Added "+n+(n===1?" pair":" pairs")+(nC?". "+nC+" look unusual: tap ⚠ "+nC+" to check":". Check them in the list."),undo);
