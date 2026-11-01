@@ -17,10 +17,10 @@ const {launch,ok}=require('./base');
  await p.click("#autoBtn");await p.waitForSelector("#adAI");
  ok(await p.$eval(".aibox .aik",e=>e.hidden),"key field hidden until AI is ticked");
  await p.check("#adAI");await p.fill("#adAIKey","GOODKEY");await p.click("#adAITest");await p.waitForTimeout(600);
- const st=await p.textContent("#adAISt");ok(/gemini-3\.8-flash$/.test(st.trim()),"test picks the newest Flash model, not lite/tts: "+st);
+ const st=await p.$eval("#adAIModel",s=>[...s.options].map(o=>o.value).join(","));ok(st===",gemini-3.8-flash,gemini-3.5-flash-lite","models listed, newest Flash first, no tts: "+st);
  await p.click("#adGo");await p.waitForFunction(()=>(S.sugg||[]).length>0||document.querySelector("#adRes .failx"),null,{timeout:120000});
  const r=await p.evaluate(()=>({n:S.sugg.length,withA:S.sugg.filter(s=>s.a.length).length,lab:S.sugg.map(s=>s.label).join(",")}));console.log(JSON.stringify(r),"calls",calls);
- ok(r.n>=10&&r.withA===r.n,"AI result became suggestions with answers: "+r.n);console.log(JSON.stringify(models));ok(models.filter(m=>m==="gemini-3.8-flash").length===3&&models.at(-1)==="gemini-3.5-flash-lite","busy model: retried twice, then switched to the next model");
+ ok(r.n>=10&&r.withA===r.n,"AI result became suggestions with answers: "+r.n);console.log(JSON.stringify(models));ok(models.filter(m=>m==="gemini-3.8-flash").length===1&&models.slice(1).every(m=>m==="gemini-3.5-flash-lite"),"busy model asked only once, then switched");
  const sent=await p.evaluate(()=>LOG&&LOG.text?LOG.text():"");
  // end at *****: answer box must stop above the ***** line
  const chk=await p.evaluate(async()=>{const s=S.sugg[0],a=s.a.at(-1);const P=await readPages([a.page],null,true);const star=P.get(a.page).content.find(l=>/^\*{3,}/.test(l.text.trim())&&l.y0>a.y);return star?{boxEnd:a.y+a.h,star:star.y0}:null});

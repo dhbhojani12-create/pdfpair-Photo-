@@ -18,7 +18,7 @@ const {launch,ok}=require('./base');
  await p.click("#autoBtn");await p.waitForSelector("#adAI");
  ok(await p.$eval(".aibox .aik",e=>e.hidden),"key field hidden until AI is ticked");
  await p.check("#adAI");await p.fill("#adAIKey","GOODKEY");await p.click("#adAITest");await p.waitForTimeout(600);
- const st=await p.textContent("#adAISt");ok(/gemini-3\.8-flash$/.test(st.trim()),"test picks the newest Flash model, not lite/tts: "+st);
+ const st=await p.$eval("#adAIModel",s=>[...s.options].map(o=>o.value).join(","));ok(st===",gemini-3.8-flash,gemini-3.5-flash-lite","models listed, newest Flash first, no tts: "+st);
  await p.click("#adGo");await p.waitForFunction(()=>(S.sugg||[]).length>0||document.querySelector("#adRes .failx"),null,{timeout:120000});
  const r=await p.evaluate(()=>({n:S.sugg.length,withA:S.sugg.filter(s=>s.a.length).length,lab:S.sugg.map(s=>s.label).join(",")}));console.log(JSON.stringify(r),"calls",calls);
  ok(r.n>=10&&r.withA===r.n,"AI result became suggestions with answers: "+r.n);console.log(JSON.stringify(models));ok(models[0]==="gemini-3.8-flash"&&models.slice(1).every(m=>m==="gemini-3.5-flash-lite"),"daily limit switches to the next model");ok(models.length>=4,"a cut-off answer is split and re-asked: "+models.length+" calls");

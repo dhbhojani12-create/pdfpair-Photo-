@@ -4032,11 +4032,11 @@ async function aiFind(qf,qt,af,at,prog,opt){const a=AI.get(),key=a.key;if(!key)t
     if(len>AI_CHUNK){chunks.push(cur);cur=[];len=0}}
   if(cur.length)chunks.push(cur);
   if(!seq.length)return{error:"notext"};
-  const raw=[];let prevTail="",models=(AI.get().models||[model]).slice(),mi=Math.max(0,models.indexOf(model)),done=0;const total=chunks.reduce((x,c)=>x+c.length,0);
+  const raw=[];let prevTail="",models=(AI.get().models||[model]).slice(),mi=0,done=0;{const pick=AI.get().pick;if(pick&&models.includes(pick))models=[pick,...models.filter(m=>m!==pick)];else if(pick)models.unshift(pick)}const total=chunks.reduce((x,c)=>x+c.length,0);
   LOG.add(chunks.length+" request(s) planned for "+pages.length+" pages");
   const hist=[];const pace=async(est,what)=>{for(;;){const now=Date.now();while(hist.length&&now-hist[0].t>61000)hist.shift();const tok=hist.reduce((x,h)=>x+h.tok,0);
       if(hist.length<AI_RPM&&tok+est<=AI_TPM)break;const w=Math.ceil((61000-(now-hist[0].t))/1000);prog("Pacing for Google’s free limit: "+w+"s, then "+what,.2+.75*done/total);await new Promise(r=>setTimeout(r,1000))}};
-  const queue=chunks.slice();
+  const queue=chunks.slice();let busyLeft=1;
   while(queue.length){const ch=queue.shift(),what="part "+(chunks.length-queue.length)+" of "+chunks.length;
     const head=(prevTail?"For context, the previous pages ended with "+prevTail+".\n":"")+(opt.mcq?"":"Skip multiple-choice questions (MCQs) and their answers.\n")+"Lines:\n";
     const text=head+ch.join("\n"),est=Math.ceil((text.length+AI_SYS.length)/3.2);
@@ -4045,8 +4045,8 @@ async function aiFind(qf,qt,af,at,prog,opt){const a=AI.get(),key=a.key;if(!key)t
       try{j=await gemFetch("models/"+models[mi]+":generateContent",key,body);break}
       catch(e){const daily=/per ?day|PerDay|daily/i.test(e.raw||"");
         const busy=e.code>=500||/high demand|overloaded|unavailable|try again later/i.test(e.raw||e.message||"");
-        if(busy&&tries<2){const w=tries?15:6;LOG.add(models[mi]+" busy ("+e.code+"), waiting "+w+"s");for(let t=w;t>0;t--){prog("Google’s AI is busy right now: trying again in "+t+"s",.2+.75*done/total);await new Promise(r=>setTimeout(r,1000))}continue}
-        if(busy&&mi+1<models.length){LOG.add(models[mi]+" still busy, switching to "+models[mi+1]);mi++;tries=-1;continue}
+        if(busy&&mi+1<models.length){LOG.add(models[mi]+" busy ("+e.code+"), switching to "+models[mi+1]+" (each try counts toward Google’s daily limit, so the busy model is not asked again)");mi++;continue}
+        if(busy&&!e.retried){e.retried=1;busyLeft--;if(busyLeft>=0){for(let t=20;t>0;t--){prog("Google’s AI is busy: one more try in "+t+"s",.2+.75*done/total);await new Promise(r=>setTimeout(r,1000))}continue}}
         if(busy)throw Object.assign(new Error("Google’s AI is overloaded right now (“high demand”). This is on Google’s side and usually passes within minutes. Used PaperPair’s own methods instead."),{code:e.code});
         if(e.code===429&&daily&&mi+1<models.length){LOG.add("daily limit on "+models[mi]+", switching to "+models[mi+1]);mi++;continue}
         if(e.code===429&&daily)throw Object.assign(new Error("Google’s free daily limit for your key is used up (about 20 AI requests a day). Try again tomorrow, or use PaperPair’s own methods for now."),{code:429});
@@ -4072,16 +4072,19 @@ async function aiFind(qf,qt,af,at,prog,opt){const a=AI.get(),key=a.key;if(!key)t
   const out=qs.map((q,i)=>{const an=pairs.get(q);const m=String(q.label).match(/\d+/);return{num:m?+m[0]:i+1,label:String(q.label||i+1).slice(0,24),q:q.box,a:an?an.box:[],tags:q.group?[String(q.group).split("·")[0].trim()].filter(Boolean):undefined}});
   LOG.add("AI result: "+out.length+" questions, "+pairs.size+" with answers, "+orph+" answers without a question");
   prog("Done",1);return{pairs:out,orphans:orph,missing:[],via:"AI ("+model+")"}}
+function aiModelOpts(){const a=AI.get(),l=a.models||[];if(!l.length)return'<option value="">Best available (press Test key to list)</option>';
+  return'<option value="">Best available ('+esc(l[0])+')</option>'+l.map(m=>'<option value="'+esc(m)+'"'+(a.pick===m?" selected":"")+'>'+esc(m)+'</option>').join("")}
 function aiPanelHTML(){const a=AI.get();
   return'<div class="aibox"><label class="chk"><input type="checkbox" id="adAI"'+(a.on?" checked":"")+'> <b>Use AI to find questions</b> <span style="color:var(--faint)">(Google Gemini, free key)</span></label>'+
     '<div class="aik"'+(a.on?"":" hidden")+'><label class="kwf"><span>Your Gemini key</span><input id="adAIKey" type="password" autocomplete="off" spellcheck="false" placeholder="Paste the key from Google AI Studio" value="'+esc(a.key||"")+'"></label>'+
     '<div class="aibtn"><a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Get a free key</a><button type="button" class="btn" id="adAITest">Test key</button></div>'+
+    '<label class="kwf"><span>Model</span><select id="adAIModel">'+aiModelOpts()+'</select></label>'+
     '<p class="ainote" id="adAISt">'+(a.model?"Ready · model "+esc(a.model):"Stored only on this device.")+'</p>'+
     '<p class="ainote">The page text of this PDF is sent to Google. On the free tier Google may use it to improve its products, so use it for study material, not private notes. If the AI can’t be reached or its free limit runs out, PaperPair uses its own methods below.</p></div></div>'}
-document.addEventListener("change",e=>{if(e.target.id==="adAI"){AI.set({on:e.target.checked});const k=document.querySelector(".aibox .aik");if(k)k.hidden=!e.target.checked;if(e.target.checked&&!AI.get().key){const f=$("#adAIKey");if(f)f.focus()}}});
+document.addEventListener("change",e=>{if(e.target.id==="adAIModel"){AI.set({pick:e.target.value});return}if(e.target.id==="adAI"){AI.set({on:e.target.checked});const k=document.querySelector(".aibox .aik");if(k)k.hidden=!e.target.checked;if(e.target.checked&&!AI.get().key){const f=$("#adAIKey");if(f)f.focus()}}});
 document.addEventListener("input",e=>{if(e.target.id==="adAIKey"){AI.set({key:e.target.value.trim(),model:""});const s=$("#adAISt");if(s)s.textContent="Stored only on this device."}});
 document.addEventListener("click",async e=>{if(e.target.id!=="adAITest")return;const s=$("#adAISt"),k=AI.get().key;if(!k){s.textContent="Paste your key first.";return}
-  s.textContent="Checking…";try{const m=await gemModel(k,true);s.textContent="Key works · model "+m}catch(er){s.textContent=er.message}});
+  s.textContent="Checking…";try{const m=await gemModel(k,true);const sel=$("#adAIModel");if(sel)sel.innerHTML=aiModelOpts();s.textContent="Key works · "+(AI.get().models||[]).length+" models available. If one is often busy, choose another above."}catch(er){s.textContent=er.message}});
 async function runAuto(qf,qt,af,at,prog,over){
   const opt={...exOpt,mcq:$("#adAutoMcq")?$("#adAutoMcq").checked:exOpt.mcq,docName:S.doc&&S.doc.name,...(over||{})};if(!over){exOpt.mcq=opt.mcq;try{localStorage.setItem("pp.exOpt",JSON.stringify(exOpt))}catch(e){}}
   const force=!!S.autoForce;S.autoForce=false;const att=[];let prof=null;const getProf=async()=>prof||(prof=await numberProfile(qf,qt));
